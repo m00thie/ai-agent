@@ -1,5 +1,10 @@
+import os
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI(
     title="FastAPI Project",
