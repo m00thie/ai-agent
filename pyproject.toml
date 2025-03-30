@@ -2,7 +2,7 @@
 name = "fastapi-project"
 version = "0.1.0"
 description = "A FastAPI project"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Mateusz Semik <turim00th@gmail.com"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
