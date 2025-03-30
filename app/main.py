@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 
 app = FastAPI(
     title="FastAPI Project",
@@ -8,7 +9,7 @@ app = FastAPI(
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return RedirectResponse(url="/health")
 
 @app.get("/health")
 async def health():
