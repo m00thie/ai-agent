@@ -1,5 +1,8 @@
 import os
+import ssl
 from typing import Any, Dict, List, Optional, Union, Protocol
+
+import httpx
 from langfuse import Langfuse
 from langfuse.client import StatefulClient, PromptClient
 
@@ -52,10 +55,18 @@ class LangfuseService:
         - LANGFUSE_SECRET_KEY: Your Langfuse secret API key
         - LANGFUSE_HOST: The Langfuse API host (defaults to https://cloud.langfuse.com)
         """
+
+        if os.getenv("REQUEST_CA_CERTIFICATE"):
+            ssl_context = ssl.create_default_context(cafile=os.getenv("REQUEST_CA_CERTIFICATE"))
+            http_client = httpx.Client(verify=ssl_context, timeout=20.0)
+        else:
+            http_client = None
+
         self.client = Langfuse(
             public_key=os.getenv("LANGFUSE_PUBLIC_KEY", ""),
             secret_key=os.getenv("LANGFUSE_SECRET_KEY", ""),
-            host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+            host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+            httpx_client=http_client
         )
     
     def create_trace(self, **kwargs) -> StatefulClient:
