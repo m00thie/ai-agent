@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Protocol
 from langfuse import Langfuse
 from langfuse.api.resources.commons.types import (
     CreateGeneration,
@@ -9,6 +9,15 @@ from langfuse.api.resources.commons.types import (
     CreateTrace,
     UpdateObservation,
 )
+from langfuse.client import StatefulClient
+
+
+class LangfuseParent(Protocol):
+    """Protocol for objects that can be used as parents in LangfuseService methods."""
+    
+    def span(self, **kwargs) -> StatefulClient: ...
+    def generation(self, **kwargs) -> StatefulClient: ...
+    def event(self, **kwargs) -> StatefulClient: ...
 
 
 class LangfuseService:
@@ -26,76 +35,72 @@ class LangfuseService:
             host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
         )
     
-    def create_trace(self, **kwargs) -> str:
+    def create_trace(self, **kwargs) -> StatefulClient:
         """Create a new trace.
         
         Args:
             **kwargs: Arguments to pass to the Langfuse client.
             
         Returns:
-            str: The ID of the created trace.
+            StatefulClient: The created trace object.
         """
-        trace = self.client.trace(**kwargs)
-        return trace.id
+        return self.client.trace(**kwargs)
     
-    def create_span(self, trace_id: Optional[str] = None, **kwargs) -> str:
+    def create_span(self, parent: Optional[LangfuseParent] = None, **kwargs) -> StatefulClient:
         """Create a new span.
         
         Args:
-            trace_id: Optional trace ID to associate the span with.
+            parent: Optional parent object to create the span under.
+                   Must implement the LangfuseParent protocol.
             **kwargs: Arguments to pass to the Langfuse client.
             
         Returns:
-            str: The ID of the created span.
+            StatefulClient: The created span object.
         """
-        if trace_id:
-            trace = self.client.get_trace(trace_id)
-            span = trace.span(**kwargs)
-        else:
-            span = self.client.span(**kwargs)
-        return span.id
+        if parent:
+            return parent.span(**kwargs)
+        return self.client.span(**kwargs)
     
-    def create_generation(self, trace_id: Optional[str] = None, **kwargs) -> str:
+    def create_generation(self, parent: Optional[LangfuseParent] = None, **kwargs) -> StatefulClient:
         """Create a new generation.
         
         Args:
-            trace_id: Optional trace ID to associate the generation with.
+            parent: Optional parent object to create the generation under.
+                   Must implement the LangfuseParent protocol.
             **kwargs: Arguments to pass to the Langfuse client.
             
         Returns:
-            str: The ID of the created generation.
+            StatefulClient: The created generation object.
         """
-        if trace_id:
-            trace = self.client.get_trace(trace_id)
-            generation = trace.generation(**kwargs)
-        else:
-            generation = self.client.generation(**kwargs)
-        return generation.id
+        if parent:
+            return parent.generation(**kwargs)
+        return self.client.generation(**kwargs)
     
-    def create_event(self, trace_id: Optional[str] = None, **kwargs) -> str:
+    def create_event(self, parent: Optional[LangfuseParent] = None, **kwargs) -> StatefulClient:
         """Create a new event.
         
         Args:
-            trace_id: Optional trace ID to associate the event with.
+            parent: Optional parent object to create the event under.
+                   Must implement the LangfuseParent protocol.
             **kwargs: Arguments to pass to the Langfuse client.
             
         Returns:
-            str: The ID of the created event.
+            StatefulClient: The created event object.
         """
-        if trace_id:
-            trace = self.client.get_trace(trace_id)
-            event = trace.event(**kwargs)
-        else:
-            event = self.client.event(**kwargs)
-        return event.id
+        if parent:
+            return parent.event(**kwargs)
+        return self.client.event(**kwargs)
     
-    def create_score(self, **kwargs) -> None:
+    def create_score(self, **kwargs) -> Any:
         """Create a new score.
         
         Args:
             **kwargs: Arguments to pass to the Langfuse client.
+            
+        Returns:
+            Any: The result of the score creation.
         """
-        self.client.score(**kwargs)
+        return self.client.score(**kwargs)
     
     def get_prompt(self, name: str) -> Dict[str, Any]:
         """Retrieve a prompt by name.
@@ -108,15 +113,22 @@ class LangfuseService:
         """
         return self.client.get_prompt(name)
     
-    def update_observation(self, observation_id: str, **kwargs) -> None:
+    def update_observation(self, observation_id: str, **kwargs) -> Any:
         """Update an existing observation.
         
         Args:
             observation_id: The ID of the observation to update.
             **kwargs: Arguments to pass to the Langfuse client.
+            
+        Returns:
+            Any: The result of the observation update.
         """
-        self.client.update_observation(observation_id, **kwargs)
+        return self.client.update_observation(observation_id, **kwargs)
     
-    def flush(self) -> None:
-        """Flush all queued observations to the Langfuse API."""
-        self.client.flush()
+    def flush(self) -> Any:
+        """Flush all queued observations to the Langfuse API.
+        
+        Returns:
+            Any: The result of the flush operation.
+        """
+        return self.client.flush()
