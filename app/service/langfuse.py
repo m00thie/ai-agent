@@ -1,15 +1,7 @@
 import os
 from typing import Any, Dict, List, Optional, Union, Protocol
 from langfuse import Langfuse
-from langfuse.api.resources.commons.types import (
-    CreateGeneration,
-    CreateObservation,
-    CreateScore,
-    CreateSpan,
-    CreateTrace,
-    UpdateObservation,
-)
-from langfuse.client import StatefulClient
+from langfuse.client import StatefulClient, PromptClient
 
 
 class LangfuseParent(Protocol):
@@ -18,6 +10,7 @@ class LangfuseParent(Protocol):
     def span(self, **kwargs) -> StatefulClient: ...
     def generation(self, **kwargs) -> StatefulClient: ...
     def event(self, **kwargs) -> StatefulClient: ...
+    def score(self, **kwargs) -> StatefulClient: ...
 
 
 class LangfuseService:
@@ -26,6 +19,8 @@ class LangfuseService:
     This class delegates to the Langfuse client methods to create traces, spans,
     events, generations, and scores.
     """
+
+    __prompt_cache = {}
     
     def __init__(self):
         """Initialize the Langfuse service with credentials from environment variables."""
@@ -91,18 +86,22 @@ class LangfuseService:
             return parent.event(**kwargs)
         return self.client.event(**kwargs)
     
-    def create_score(self, **kwargs) -> Any:
+    def create_score(self, parent: Optional[LangfuseParent] = None, **kwargs) -> StatefulClient:
         """Create a new score.
         
         Args:
+            parent: Optional parent object to create the event under.
+                   Must implement the LangfuseParent protocol.
             **kwargs: Arguments to pass to the Langfuse client.
             
         Returns:
             Any: The result of the score creation.
         """
+        if parent:
+            return parent.score(**kwargs)
         return self.client.score(**kwargs)
     
-    def get_prompt(self, name: str) -> Dict[str, Any]:
+    def get_prompt(self, name: str, label: str = 'production', **kwargs) -> PromptClient:
         """Retrieve a prompt by name.
         
         Args:
@@ -111,19 +110,20 @@ class LangfuseService:
         Returns:
             Dict[str, Any]: The prompt data.
         """
-        return self.client.get_prompt(name)
-    
-    def update_observation(self, observation_id: str, **kwargs) -> Any:
-        """Update an existing observation.
-        
-        Args:
-            observation_id: The ID of the observation to update.
-            **kwargs: Arguments to pass to the Langfuse client.
-            
-        Returns:
-            Any: The result of the observation update.
-        """
-        return self.client.update_observation(observation_id, **kwargs)
+
+        if name in self.__prompt_cache:
+            for cached_prompt in self.__prompt_cache[name]:
+                if cached_prompt['label'] == label:
+                    return cached_prompt['prompt']
+
+        prompt = self.client.get_prompt(name, label=label, **kwargs)
+
+        if name not in self.__prompt_cache:
+            self.__prompt_cache[name] = []
+
+        self.__prompt_cache[name].append({'label': label, 'prompt': prompt})
+
+        return prompt
     
     def flush(self) -> Any:
         """Flush all queued observations to the Langfuse API.
