@@ -11,6 +11,12 @@ fastapi = "^0.110.0"
 uvicorn = "^0.27.0"
 python-dotenv = "^1.0.0"
 langfuse = "^2.10.0"
+pydantic = "^2.11.2"
+langchain = "^0.3.23"
+langchain-anthropic = "^0.3.10"
+langchain-openai = "^0.3.12"
+langchain-google-genai = "^2.1.2"
+langchain-perplexity = "0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
